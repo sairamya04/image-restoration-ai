@@ -10,7 +10,7 @@
 | Input | **128 × 128** |
 | Output | **256 × 256** |
 
-These measurements are from the held-out development validation split. They are **not official hidden-test results**.
+Measured on the held-out development validation split.
 
 ## Representative samples
 
@@ -20,12 +20,12 @@ These measurements are from the held-out development validation split. They are 
 | Sample 02 | 26.91 dB | 0.8477 |
 | Sample 03 | 27.67 dB | 0.5680 |
 
-The sample metrics apply only to their corresponding images.
+These values apply to the corresponding samples only.
 
 ## Demo
 
-`outputs/demo_25s.mp4` shows the restoration pipeline from degraded input to restored output with ground-truth comparison.
+`outputs/demo_25s.mp4` shows degraded input, restored output and ground-truth comparison.
 
-## Reproduction
+## Evaluation
 
-Use `evaluate.py` with the trained checkpoint and paired ground truth to reproduce PSNR/SSIM measurements. Do not treat presentation samples as the overall validation score.
+Run `evaluate.py` with a trained checkpoint and paired ground truth to reproduce PSNR and SSIM.
