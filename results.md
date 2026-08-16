@@ -14,10 +14,12 @@ Measured on the held-out development validation split using the final trained ch
 
 ## Representative samples
 
+The samples are listed in the same order as the PNG files in `outputs/`.
+
 | Sample | PSNR | SSIM |
 |---|---:|---:|
-| Sample 01 | 32.28 dB | 0.8701 |
-| Sample 02 | 26.91 dB | 0.8477 |
+| Sample 01 | 26.91 dB | 0.8477 |
+| Sample 02 | 32.28 dB | 0.8701 |
 | Sample 03 | 27.67 dB | 0.5680 |
 
 These metrics are for the corresponding visual samples only.
