@@ -1,12 +1,12 @@
 # Results & Demo
 
-Representative outputs from the image-restoration model.
+Representative outputs from the restoration model.
 
-## Samples
+## Visual samples
 
-Each comparison shows:
+Each sample shows:
 
-**Degraded Input → Restored Output → Ground Truth**
+**Degraded Input → AI Restored Output → Ground Truth**
 
 | Sample | PSNR | SSIM |
 |---|---:|---:|
@@ -14,20 +14,17 @@ Each comparison shows:
 | Sample 02 | 26.91 dB | 0.8477 |
 | Sample 03 | 27.67 dB | 0.5680 |
 
-These are representative samples, not the overall validation score.
+The metrics belong to the corresponding samples only.
 
 ## Demo
 
-`demo_25s.mp4` is the 25-second end-to-end restoration demonstration.
+`demo_25s.mp4` shows the restoration pipeline from degraded input to restored output with ground-truth comparison.
 
 ## Files
 
 ```text
-outputs/
-├── sample_01.png
-├── sample_02.png
-├── sample_03.png
-└── demo_25s.mp4
+sample_01.png
+sample_02.png
+sample_03.png
+demo_25s.mp4
 ```
-
-The sample images and video are presentation evidence from the project inference pipeline. Full evaluation outputs can be generated with `evaluate.py`.
