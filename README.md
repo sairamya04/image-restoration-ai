@@ -1,192 +1,143 @@
-# AI-Based Image Restoration for Semiconductor Inspection
+# AI Image Restoration for Semiconductor Inspection
 
-A compact PyTorch pipeline for restoring degraded grayscale inspection images. The model combines a NAFNet restoration backbone, a learned degradation-aware conditioning branch, and a detail-focused 2× super-resolution head.
+A PyTorch image-restoration pipeline for degraded grayscale inspection imagery.
 
-The project was developed for the **SEMICON India Hackathon 2026 — KLA problem statement: AI-Based Restoration of Degraded Images for Semiconductor Inspection**.
+**SEMICON India Hackathon 2026 — KLA problem statement**
 
-## What the model does
+## Approach
 
 ```text
-Degraded grayscale image
-          │
-          ├──────────────► Degradation analyzer
-          │                       │
-          ▼                       ▼
-        NAFNet              16-D embedding
-          │                       │
-          └───────────────► γ / β modulation
-                                  │
-                         F' = F(1 + γ) + β
-                                  │
-                           Detail / SR head
-                                  │
-                                  ▼
-                         Restored 2× image
+Degraded image
+      │
+      ├──► NAFNet restoration backbone
+      │
+      └──► Degradation analyzer
+                 │
+              16-D embedding
+                 │
+              γ / β modulation
+                 │
+                 ▼
+          Detail + 2× SR head
+                 │
+                 ▼
+          Restored image
 ```
 
-The development model was trained on paired degraded/ground-truth grayscale `.npy` images. Its restoration objective combines pixel fidelity, edge structure and frequency content:
+The model combines:
 
-`L = L1 + 0.1 × gradient loss + 0.01 × frequency-magnitude loss`
+- NAFNet for image restoration
+- degradation-aware conditioning through learned γ/β modulation
+- a detail-focused 2× reconstruction head
+- L1, gradient and frequency-domain losses
 
-The frequency term compares the magnitude of the 2-D Fourier spectra using an orthonormal FFT. The model is fully convolutional; the submitted evaluator therefore preserves the supplied input resolution rather than resizing every test image to a fixed size.
+Loss:
 
-## Validated development result
+```text
+L = L1 + 0.1 × Lgradient + 0.01 × Lfrequency
+```
 
-These numbers are from our held-out development validation split, **not the official hidden hackathon test set**.
+## Development result
 
-| Item | Result |
+Measured on the held-out development validation split:
+
+| Metric | Result |
 |---|---:|
-| Input | 128 × 128 grayscale |
-| Output | 256 × 256 grayscale |
-| Parameters | 6.415216 M |
-| Best checkpoint epoch | 16 |
-| Mean validation PSNR | **27.947178 dB** |
+| Mean PSNR | **27.947178 dB** |
+| Best epoch | **16** |
+| Parameters | **6.415216 M** |
+| Input | **128 × 128** |
+| Output | **256 × 256** |
 
-Representative samples and the short demo video are presentation evidence; the repository's `outputs/` directory is reserved for the actual restored test outputs.
+These are development results, **not hidden-test scores**.
 
-## Repository structure
+## Results & demo
+
+The `outputs/` directory contains three representative restoration samples and the **25-second demonstration video**.
+
+Each visual comparison follows:
+
+```text
+Degraded Input → Restored Output → Ground Truth
+```
+
+## Repository
 
 ```text
 image-restoration-ai/
-├── models/
-│   ├── nafnet.py
-│   └── integrated_model.py
-├── data/
-│   └── dataset.py
-├── checkpoints/
-│   └── best_integrated_model.pth       # add the real weights before submission
-├── outputs/                            # actual restored test outputs
-├── train.py                            # training from scratch
-├── inference.py                        # inference-only entry point
-├── evaluate.py                         # standalone benchmark/evaluation script
-├── smoke_test.py                       # architecture sanity check
-├── requirements.txt
+├── models/             # Model architecture
+├── data/               # Dataset loader and format
+├── outputs/            # Sample results + demo
+├── checkpoints/        # Trained weights
+├── train.py            # Training pipeline
+├── inference.py        # Image restoration
+├── evaluate.py         # Evaluation and metrics
+├── smoke_test.py       # Model sanity check
+├── requirements.txt    # Python dependencies
+├── results.md          # Measured results
 └── README.md
 ```
 
-## 1. Install
+## Dataset
 
-Python 3.12 is recommended for the development environment used for this project.
-
-```bash
-python -m venv .venv
-# Linux/macOS
-source .venv/bin/activate
-# Windows PowerShell
-# .venv\Scripts\Activate.ps1
-
-pip install -r requirements.txt
-```
-
-Before final submission, replace the broad dependency ranges in `requirements.txt` with the exact `pip freeze` captured from the verified training environment, as required by the hackathon.
-
-## 2. Dataset format
-
-The development dataset uses matching filenames:
+The training pipeline expects paired grayscale `.npy` files with matching filenames:
 
 ```text
 DATASET/
 ├── NoisyLR/
-│   ├── 000000.npy
-│   ├── 000001.npy
-│   └── ...
 └── GT/
-    ├── 000000.npy
-    ├── 000001.npy
-    └── ...
 ```
 
-`NoisyLR` and `GT` files must have matching stems. The development pipeline uses a deterministic 90/10 train/validation split with seed `42`.
+The dataset is supplied separately and is **not committed to this repository**.
 
-The supplied degraded arrays may contain values outside `[0, 1]` because the challenge explicitly notes that speckle noise can push intensities beyond the ground-truth range. The evaluator therefore does **not** clip the input before inference; clipping is applied only to the model output.
-
-## 3. Train from scratch
+## Training
 
 ```bash
 python train.py \
   --lr-dir /path/to/DATASET/NoisyLR \
   --gt-dir /path/to/DATASET/GT \
-  --output checkpoints/best_integrated_model.pth \
-  --epochs 30 \
-  --batch-size 8
+  --output checkpoints/best_integrated_model.pth
 ```
 
-The training script records the best validation PSNR and stores the model state, optimizer state, scheduler state, epoch, PSNR and validation loss in the checkpoint.
+Default training configuration: 30 epochs, batch size 8, AdamW, cosine learning-rate decay, and deterministic 90/10 train-validation splitting with seed 42.
 
-## 4. Run inference
-
-The inference entry point requires only an input directory, output directory and trained checkpoint:
+## Inference
 
 ```bash
 python inference.py \
-  --input-dir /path/to/test_images \
-  --output-dir outputs/test_results \
+  --input-dir /path/to/images \
+  --output-dir outputs/restored \
   --checkpoint checkpoints/best_integrated_model.pth
 ```
 
-The script accepts `.npy`, `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tif` and `.tiff` grayscale inputs and writes restored PNG images.
-
-## 5. Run the standalone evaluator
-
-This is the script intended for reproducible benchmarking:
+## Evaluation
 
 ```bash
 python evaluate.py \
-  --input-dir /path/to/test_images \
-  --output-dir outputs/test_results \
-  --checkpoint checkpoints/best_integrated_model.pth
-```
-
-It requires no notebook and no manual code edits. It loads the checkpoint, processes every supported image, writes the restored outputs, and reports mean inference time.
-
-For local paired validation, add the ground-truth directory:
-
-```bash
-python evaluate.py \
-  --input-dir /path/to/DATASET/NoisyLR \
-  --gt-dir /path/to/DATASET/GT \
+  --input-dir /path/to/NoisyLR \
+  --gt-dir /path/to/GT \
   --output-dir outputs/validation_results \
   --checkpoint checkpoints/best_integrated_model.pth
 ```
 
-When ground truth is supplied, PSNR and SSIM are also reported.
+When ground truth is supplied, the evaluator reports PSNR and SSIM and records inference timing.
 
-## 6. Quick architecture check
-
-The model structure can be checked without the dataset or trained weights:
+## Verification
 
 ```bash
 python smoke_test.py
 ```
 
-Expected output includes:
+The smoke test verifies model construction, parameter count and tensor dimensions without requiring the training dataset.
 
-```text
-Output shape : (1, 1, 256, 256)
-Parameters   : 6,415,216 (6.415216 M)
-Smoke test passed.
-```
+## Reproducibility
 
-## Weights and test outputs
+The repository contains the model definition, dataset loader, training pipeline, inference entry point and evaluation script. The trained checkpoint must be supplied separately if it is not committed to the repository.
 
-The final submission must contain the **actual trained checkpoint** and the **actual restored outputs produced by that checkpoint**. They are deliberately not replaced with fabricated placeholders.
+Before submission, verify:
 
-If the checkpoint is too large for a normal GitHub file, use Git LFS or a downloadable release/storage link, then update the README with the exact download location.
-
-## Reproducibility checklist
-
-Before submitting:
-
-- [ ] `python smoke_test.py` passes on a clean environment.
-- [ ] `requirements.txt` contains the exact verified environment (`pip freeze`).
-- [ ] `checkpoints/best_integrated_model.pth` or a documented downloadable weight is available.
-- [ ] `evaluate.py` runs from the command line without editing the source.
-- [ ] The official test outputs are present under `outputs/`.
-- [ ] The reported 27.947178 dB figure is clearly labelled as development validation, not hidden-test performance.
-
-## Official problem statement
-
-SEMICON India Hackathon 2026, KLA track:
-https://i4c.in/hackathon-2026/
-
-The official submission requirements call for a public repository containing a complete README, standalone evaluation script, training code, downloadable trained weights, restored test outputs and reproducible dependencies. The evaluation script is intended to be run as-is by the benchmarking team.
+- [ ] trained checkpoint is available
+- [ ] sample outputs correspond to the submitted checkpoint
+- [ ] evaluation runs without source-code edits
+- [ ] dependencies are pinned to the verified environment
+- [ ] development metrics are clearly separated from official test results
