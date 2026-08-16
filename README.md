@@ -4,24 +4,18 @@ PyTorch pipeline for restoring degraded grayscale inspection images.
 
 **SEMICON India Hackathon 2026 · KLA**
 
-## Model
+## Pipeline
 
 ```text
-Degraded 128×128 image
-        │
-        ├── NAFNet restoration backbone
-        │
-        └── Degradation analyzer
-                 │
-              16-D code
-                 │
-             γ / β conditioning
-                 │
-                 ▼
-          Detail + 2× SR head
-                 │
-                 ▼
-          Restored 256×256 image
+128×128 degraded input
+        ↓
+NAFNet restoration backbone
+        ↓
+Degradation-aware conditioning
+        ↓
+Detail + 2× reconstruction head
+        ↓
+256×256 restored output
 ```
 
 Training loss:
@@ -40,37 +34,33 @@ L = L1 + 0.1 × Lgradient + 0.01 × Lfrequency
 | Input | **128 × 128** |
 | Output | **256 × 256** |
 
-These values are from the final trained checkpoint used for this repository's development results. They are not hidden-test scores.
+These are development-validation results from the final trained checkpoint. They are not hidden-test scores.
 
 ## Results
 
-`outputs/` contains three representative visual comparisons and the 25-second demo.
+`outputs/` contains three representative input/restored/ground-truth comparisons and the **25-second demo video**.
 
-```text
-Degraded Input → AI Restored Output → Ground Truth
-```
-
-See [`results.md`](results.md) for the reported sample metrics.
+See [`results.md`](results.md) for the sample metrics.
 
 ## Repository
 
 ```text
 image-restoration-ai/
-├── data/               # Dataset loader
-├── models/             # Restoration architecture
-├── outputs/            # Sample results and demo
-├── train.py            # Training
-├── inference.py        # Inference
-├── evaluate.py         # PSNR / SSIM evaluation
-├── smoke_test.py       # Architecture check
-├── requirements.txt    # Dependencies
-├── results.md          # Results record
+├── data/               # Dataset loader and input format
+├── models/             # NAFNet and integrated restoration model
+├── outputs/            # Sample results and demo video
+├── train.py            # Model training
+├── inference.py        # Single-run image restoration
+├── evaluate.py         # PSNR, SSIM and timing evaluation
+├── smoke_test.py       # Fast architecture sanity check
+├── requirements.txt    # Python dependencies
+├── results.md          # Verified results record
 └── README.md
 ```
 
 ## Dataset
 
-The loader expects paired grayscale NumPy arrays with matching filenames:
+Use paired grayscale `.npy` files with matching filenames:
 
 ```text
 DATASET/
@@ -82,9 +72,24 @@ DATASET/
     └── ...
 ```
 
-The dataset is supplied separately and is not stored in this repository.
+The dataset is provided separately and is not included in this repository.
 
-## Training
+## Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+## Train
 
 ```bash
 python train.py \
@@ -93,7 +98,7 @@ python train.py \
   --output best_integrated_model.pth
 ```
 
-Defaults: 30 epochs, batch size 8, AdamW, cosine learning-rate decay, and seed 42.
+Default configuration: 30 epochs, batch size 8, AdamW, cosine learning-rate decay, seed 42.
 
 ## Inference
 
@@ -116,27 +121,23 @@ python evaluate.py \
   --checkpoint /path/to/best_integrated_model.pth
 ```
 
-With ground truth, the evaluator reports mean PSNR, mean SSIM, and mean inference time.
+With ground truth, this reports mean PSNR, mean SSIM, and mean inference time.
 
-## Quick check
+## Smoke test
+
+`smoke_test.py` is a fast architecture check. It does **not** train the model and does **not** require the dataset or checkpoint.
+
+Run:
 
 ```bash
 python smoke_test.py
 ```
 
-This checks model construction, parameter count, and the expected 128×128 → 256×256 output shape without requiring the dataset or checkpoint.
+It verifies:
 
-## Setup
+- model construction and imports
+- parameter count
+- expected tensor dimensions
+- 128×128 input → 256×256 output
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+A successful run confirms that the repository's model code loads and produces the expected output shape before a full training or inference run.
