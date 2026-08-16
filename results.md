@@ -4,13 +4,13 @@
 
 | Metric | Value |
 |---|---:|
-| Mean PSNR | **27.947178 dB** |
-| Best epoch | **16** |
+| Mean PSNR | **27.915544 dB** |
+| Best epoch | **18** |
 | Parameters | **6.415216 M** |
 | Input | **128 × 128** |
 | Output | **256 × 256** |
 
-Measured on the held-out development validation split.
+Measured on the held-out development validation split for the submitted checkpoint.
 
 ## Representative samples
 
@@ -28,4 +28,4 @@ These values apply to the corresponding samples only.
 
 ## Evaluation
 
-Run `evaluate.py` with a trained checkpoint and paired ground truth to reproduce PSNR and SSIM.
+Run `evaluate.py` with the checkpoint and paired ground truth to reproduce PSNR and SSIM.
