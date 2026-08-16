@@ -5,12 +5,12 @@
 | Metric | Value |
 |---|---:|
 | Mean PSNR | **27.915544 dB** |
-| Best epoch | **18** |
+| Checkpoint epoch | **18** |
 | Parameters | **6.415216 M** |
 | Input | **128 × 128** |
 | Output | **256 × 256** |
 
-Measured on the held-out development validation split for the submitted checkpoint.
+Measured on the held-out development validation split using the final trained checkpoint.
 
 ## Representative samples
 
@@ -20,12 +20,20 @@ Measured on the held-out development validation split for the submitted checkpoi
 | Sample 02 | 26.91 dB | 0.8477 |
 | Sample 03 | 27.67 dB | 0.5680 |
 
-These values apply to the corresponding samples only.
+These metrics are for the corresponding visual samples only.
 
 ## Demo
 
-`outputs/demo_25s.mp4` shows degraded input, restored output and ground-truth comparison.
+`outputs/semicon_live_demo_25s.mp4` shows the restoration flow from degraded input to AI-restored output with ground-truth comparison.
 
-## Evaluation
+## Reproduce evaluation
 
-Run `evaluate.py` with the checkpoint and paired ground truth to reproduce PSNR and SSIM.
+```bash
+python evaluate.py \
+  --input-dir /path/to/NoisyLR \
+  --gt-dir /path/to/GT \
+  --output-dir outputs/validation_results \
+  --checkpoint /path/to/best_integrated_model.pth
+```
+
+The checkpoint is kept outside the repository because of its file size. The source code and evaluation pipeline are included here.
