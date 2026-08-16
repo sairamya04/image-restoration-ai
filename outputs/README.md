@@ -10,21 +10,14 @@ Each sample shows:
 
 | Sample | PSNR | SSIM |
 |---|---:|---:|
-| Sample 01 | 32.28 dB | 0.8701 |
-| Sample 02 | 26.91 dB | 0.8477 |
-| Sample 03 | 27.67 dB | 0.5680 |
+| 01 | 32.28 dB | 0.8701 |
+| 02 | 26.91 dB | 0.8477 |
+| 03 | 27.67 dB | 0.5680 |
 
 The metrics belong to the corresponding samples only.
 
 ## Demo
 
-`demo_25s.mp4` shows the restoration pipeline from degraded input to restored output with ground-truth comparison.
+`semicon_live_demo_25s.mp4` shows the restoration pipeline from degraded input to restored output with ground-truth comparison.
 
-## Files
-
-```text
-sample_01.png
-sample_02.png
-sample_03.png
-demo_25s.mp4
-```
+The directory contains three PNG sample comparisons and the 25-second demo video.
