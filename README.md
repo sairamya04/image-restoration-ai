@@ -1,37 +1,30 @@
 # AI Image Restoration for Semiconductor Inspection
 
-A PyTorch image-restoration pipeline for degraded grayscale inspection imagery.
+PyTorch restoration pipeline for degraded grayscale inspection images.
 
-**SEMICON India Hackathon 2026 — KLA problem statement**
+**SEMICON India Hackathon 2026 · KLA**
 
-## Approach
+## Model
 
 ```text
 Degraded image
       │
-      ├──► NAFNet restoration backbone
+      ├── NAFNet restoration backbone
       │
-      └──► Degradation analyzer
-                 │
-              16-D embedding
-                 │
-              γ / β modulation
-                 │
-                 ▼
-          Detail + 2× SR head
-                 │
-                 ▼
-          Restored image
+      └── Degradation analyzer
+                │
+             16-D code
+                │
+          γ / β conditioning
+                │
+                ▼
+        Detail + 2× SR head
+                │
+                ▼
+        Restored 256×256 image
 ```
 
-The model combines:
-
-- NAFNet for image restoration
-- degradation-aware conditioning through learned γ/β modulation
-- a detail-focused 2× reconstruction head
-- L1, gradient and frequency-domain losses
-
-Loss:
+The training objective combines pixel, gradient and frequency losses:
 
 ```text
 L = L1 + 0.1 × Lgradient + 0.01 × Lfrequency
@@ -39,58 +32,60 @@ L = L1 + 0.1 × Lgradient + 0.01 × Lfrequency
 
 ## Development result
 
-Measured on the held-out development validation split:
-
-| Metric | Result |
+| Metric | Value |
 |---|---:|
-| Mean PSNR | **27.947178 dB** |
+| Mean validation PSNR | **27.947178 dB** |
 | Best epoch | **16** |
 | Parameters | **6.415216 M** |
 | Input | **128 × 128** |
 | Output | **256 × 256** |
 
-These are development results, **not hidden-test scores**.
+Measured on the held-out development validation split.
 
-## Results & demo
+## Results
 
-The `outputs/` directory contains three representative restoration samples and the **25-second demonstration video**.
-
-Each visual comparison follows:
+`outputs/` contains three representative visual comparisons and the 25-second demo.
 
 ```text
-Degraded Input → Restored Output → Ground Truth
+Degraded Input → AI Restored Output → Ground Truth
 ```
 
-## Repository
+See [`results.md`](results.md) for the measured sample metrics.
+
+## Structure
 
 ```text
 image-restoration-ai/
-├── models/             # Model architecture
-├── data/               # Dataset loader and format
-├── outputs/            # Sample results + demo
+├── models/             # Architecture
+├── data/               # Dataset loader
 ├── checkpoints/        # Trained weights
-├── train.py            # Training pipeline
-├── inference.py        # Image restoration
-├── evaluate.py         # Evaluation and metrics
-├── smoke_test.py       # Model sanity check
-├── requirements.txt    # Python dependencies
-├── results.md          # Measured results
+├── outputs/            # Results and demo
+├── train.py            # Training
+├── inference.py        # Inference
+├── evaluate.py         # Evaluation
+├── smoke_test.py       # Model check
+├── requirements.txt    # Dependencies
+├── results.md          # Results
 └── README.md
 ```
 
 ## Dataset
 
-The training pipeline expects paired grayscale `.npy` files with matching filenames:
+Paired grayscale NumPy arrays with matching filenames:
 
 ```text
 DATASET/
 ├── NoisyLR/
+│   ├── 000000.npy
+│   └── ...
 └── GT/
+    ├── 000000.npy
+    └── ...
 ```
 
-The dataset is supplied separately and is **not committed to this repository**.
+The dataset is supplied separately and is not stored in the repository.
 
-## Training
+## Train
 
 ```bash
 python train.py \
@@ -99,7 +94,7 @@ python train.py \
   --output checkpoints/best_integrated_model.pth
 ```
 
-Default training configuration: 30 epochs, batch size 8, AdamW, cosine learning-rate decay, and deterministic 90/10 train-validation splitting with seed 42.
+Defaults: 30 epochs, batch size 8, AdamW, cosine learning-rate decay and seed 42.
 
 ## Inference
 
@@ -120,24 +115,27 @@ python evaluate.py \
   --checkpoint checkpoints/best_integrated_model.pth
 ```
 
-When ground truth is supplied, the evaluator reports PSNR and SSIM and records inference timing.
+With ground truth, the evaluator reports PSNR and SSIM and records inference time.
 
-## Verification
+## Quick check
 
 ```bash
 python smoke_test.py
 ```
 
-The smoke test verifies model construction, parameter count and tensor dimensions without requiring the training dataset.
+This verifies model construction, parameter count and output dimensions without the dataset.
 
-## Reproducibility
+## Dependencies
 
-The repository contains the model definition, dataset loader, training pipeline, inference entry point and evaluation script. The trained checkpoint must be supplied separately if it is not committed to the repository.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-Before submission, verify:
+Windows PowerShell:
 
-- [ ] trained checkpoint is available
-- [ ] sample outputs correspond to the submitted checkpoint
-- [ ] evaluation runs without source-code edits
-- [ ] dependencies are pinned to the verified environment
-- [ ] development metrics are clearly separated from official test results
+```powershell
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
