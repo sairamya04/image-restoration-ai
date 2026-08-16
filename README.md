@@ -10,7 +10,6 @@ PyTorch restoration pipeline for degraded grayscale inspection images.
 Degraded image
       │
       ├── NAFNet restoration backbone
-      │
       └── Degradation analyzer
                 │
              16-D code
@@ -24,33 +23,33 @@ Degraded image
         Restored 256×256 image
 ```
 
-The training objective combines pixel, gradient and frequency losses:
+Training loss:
 
 ```text
 L = L1 + 0.1 × Lgradient + 0.01 × Lfrequency
 ```
 
-## Development result
+## Validation
 
 | Metric | Value |
 |---|---:|
-| Mean validation PSNR | **27.947178 dB** |
-| Best epoch | **16** |
+| Mean PSNR | **27.915544 dB** |
+| Best epoch | **18** |
 | Parameters | **6.415216 M** |
 | Input | **128 × 128** |
 | Output | **256 × 256** |
 
-Measured on the held-out development validation split.
+Measured on the held-out development validation split for the submitted checkpoint.
 
 ## Results
 
-`outputs/` contains three representative visual comparisons and the 25-second demo.
+`outputs/` contains three representative comparisons and the 25-second demo.
 
 ```text
-Degraded Input → AI Restored Output → Ground Truth
+Degraded Input → Restored Output → Ground Truth
 ```
 
-See [`results.md`](results.md) for the measured sample metrics.
+See [`results.md`](results.md) for sample metrics.
 
 ## Structure
 
@@ -76,11 +75,7 @@ Paired grayscale NumPy arrays with matching filenames:
 ```text
 DATASET/
 ├── NoisyLR/
-│   ├── 000000.npy
-│   └── ...
 └── GT/
-    ├── 000000.npy
-    └── ...
 ```
 
 The dataset is supplied separately and is not stored in the repository.
@@ -115,7 +110,7 @@ python evaluate.py \
   --checkpoint checkpoints/best_integrated_model.pth
 ```
 
-With ground truth, the evaluator reports PSNR and SSIM and records inference time.
+With ground truth, the evaluator reports PSNR and SSIM.
 
 ## Quick check
 
@@ -123,19 +118,10 @@ With ground truth, the evaluator reports PSNR and SSIM and records inference tim
 python smoke_test.py
 ```
 
-This verifies model construction, parameter count and output dimensions without the dataset.
+Verifies model construction, parameter count and output dimensions.
 
 ## Dependencies
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
