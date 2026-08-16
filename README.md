@@ -189,4 +189,4 @@ Before submitting:
 SEMICON India Hackathon 2026, KLA track:
 https://i4c.in/hackathon-2026/
 
-The official requirements specify a public GitHub repository with a complete README, standalone evaluation script, training code, downloadable trained weights, restored test outputs and reproducible dependencies. The evaluation script is intended to be run as-is by the benchmarking team. citeturn0search0
+The official submission requirements call for a public repository containing a complete README, standalone evaluation script, training code, downloadable trained weights, restored test outputs and reproducible dependencies. The evaluation script is intended to be run as-is by the benchmarking team.
