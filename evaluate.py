@@ -9,7 +9,6 @@ from skimage.metrics import structural_similarity
 
 from models.integrated_model import IntegratedRestorationModel
 
-
 SUPPORTED = {".npy", ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
 
@@ -18,7 +17,6 @@ def load_image(path: Path) -> np.ndarray:
         array = np.load(path).astype(np.float32)
     else:
         array = np.asarray(Image.open(path).convert("L"), dtype=np.float32) / 255.0
-
     if array.ndim != 2:
         raise ValueError(f"Expected a single-channel image: {path} -> {array.shape}")
     return array
@@ -26,16 +24,16 @@ def load_image(path: Path) -> np.ndarray:
 
 def save_image(array: np.ndarray, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(np.clip(array, 0.0, 1.0) * 255.0).convert("L").save(path)
+    image = np.clip(array, 0.0, 1.0) * 255.0
+    Image.fromarray(image.astype(np.uint8), mode="L").save(path)
 
 
 def make_tensor(array: np.ndarray, device: torch.device) -> torch.Tensor:
-    # The model is fully convolutional and therefore supports both
-    # 128->256 and 256->512 restoration without resizing the input.
+    # Fully convolutional model: preserve the supplied resolution.
     return torch.from_numpy(array).float().unsqueeze(0).unsqueeze(0).to(device)
 
 
-def find_ground_truth(gt_dir: Path, stem: str) -> Path | None:
+def find_ground_truth(gt_dir: Path, stem: str):
     for suffix in SUPPORTED:
         candidate = gt_dir / f"{stem}{suffix}"
         if candidate.exists():
@@ -120,8 +118,10 @@ def main() -> None:
     print(f"Processed images : {len(files)}")
     print(f"Mean inference   : {mean_ms:.3f} ms/image")
     if metrics:
-        print(f"Mean PSNR        : {np.mean([m[0] for m in metrics):.6f} dB")
-        print(f"Mean SSIM        : {np.mean([m[1] for m in metrics]):.6f}")
+        mean_psnr = np.mean([m[0] for m in metrics])
+        mean_ssim = np.mean([m[1] for m in metrics])
+        print(f"Mean PSNR        : {mean_psnr:.6f} dB")
+        print(f"Mean SSIM        : {mean_ssim:.6f}")
     print(f"Outputs saved to : {output_dir}")
     print("=" * 64)
 
