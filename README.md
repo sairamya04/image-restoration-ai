@@ -1,75 +1,134 @@
-# AI-Based Restoration of Degraded Images for Semiconductor Inspection
+# AI-Based Image Restoration for Semiconductor Inspection
 
-A PyTorch restoration and 2× super-resolution pipeline for grayscale semiconductor inspection images. The validated final architecture combines a NAFNet restoration backbone, learned degradation-aware conditioning, and a detail-aware super-resolution head.
+A compact PyTorch pipeline for restoring degraded grayscale inspection images. The model combines a NAFNet restoration backbone, a learned degradation-aware conditioning branch, and a detail-focused 2× super-resolution head.
+
+The project was developed for the **SEMICON India Hackathon 2026 — KLA problem statement: AI-Based Restoration of Degraded Images for Semiconductor Inspection**.
+
+## What the model does
+
+```text
+Degraded grayscale image
+          │
+          ├──────────────► Degradation analyzer
+          │                       │
+          ▼                       ▼
+        NAFNet              16-D embedding
+          │                       │
+          └───────────────► γ / β modulation
+                                  │
+                         F' = F(1 + γ) + β
+                                  │
+                           Detail / SR head
+                                  │
+                                  ▼
+                         Restored 2× image
+```
+
+The development model was trained on paired degraded/ground-truth grayscale `.npy` images. Its restoration objective combines pixel fidelity, edge structure and frequency content:
+
+`L = L1 + 0.1 × gradient loss + 0.01 × frequency-magnitude loss`
+
+The frequency term compares the magnitude of the 2-D Fourier spectra using an orthonormal FFT. The model is fully convolutional; the submitted evaluator therefore preserves the supplied input resolution rather than resizing every test image to a fixed size.
 
 ## Validated development result
 
-- Input: degraded grayscale image, 128×128 in the supplied training split
-- Output: restored grayscale image, 256×256
-- Final integrated model: ~6.415 M parameters
-- Best validation checkpoint: epoch 16
-- Mean validation PSNR: **27.947178 dB**
-- Training loss: L1 + 0.1×Sobel gradient loss + 0.01×frequency-magnitude loss
+These numbers are from our held-out development validation split, **not the official hidden hackathon test set**.
 
-The reported metric is from the project validation split; it is not a claim about the official hidden test set.
+| Item | Result |
+|---|---:|
+| Input | 128 × 128 grayscale |
+| Output | 256 × 256 grayscale |
+| Parameters | 6.415216 M |
+| Best checkpoint epoch | 16 |
+| Mean validation PSNR | **27.947178 dB** |
 
-## Architecture
+Representative samples and the short demo video are presentation evidence; the repository's `outputs/` directory is reserved for the actual restored test outputs.
 
-```text
-Degraded LR image
-       |
-       +----> NAFNet restoration backbone ----+
-       |                                       |
-       +----> Degradation analyzer -> 16-D ----+--> gamma/beta
-                                                |
-                          F' = F(1 + gamma) + beta
-                                                |
-                                      Detail/SR head
-                                                |
-                                         256×256 output
-```
-
-The degradation-conditioning path starts with zero gamma/beta output so the initial modulation is neutral.
-
-## Repository layout
+## Repository structure
 
 ```text
-models/nafnet.py             NAFNet backbone
-models/integrated_model.py   final integrated architecture
-data/dataset.py              paired .npy dataset loader
-train.py                     reproducible training script
-evaluate.py                  standalone inference/evaluation script
-requirements.txt             runtime dependencies
-checkpoints/                 place final trained weights here
-outputs/                     place generated restored outputs here
+image-restoration-ai/
+├── models/
+│   ├── nafnet.py
+│   └── integrated_model.py
+├── data/
+│   └── dataset.py
+├── checkpoints/
+│   └── best_integrated_model.pth       # add the real weights before submission
+├── outputs/                            # actual restored test outputs
+├── train.py                            # training from scratch
+├── inference.py                        # inference-only entry point
+├── evaluate.py                         # standalone benchmark/evaluation script
+├── smoke_test.py                       # architecture sanity check
+├── requirements.txt
+└── README.md
 ```
 
-## Dataset format
+## 1. Install
 
-The development dataset used paired NumPy files:
+Python 3.12 is recommended for the development environment used for this project.
+
+```bash
+python -m venv .venv
+# Linux/macOS
+source .venv/bin/activate
+# Windows PowerShell
+# .venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+```
+
+Before final submission, replace the broad dependency ranges in `requirements.txt` with the exact `pip freeze` captured from the verified training environment, as required by the hackathon.
+
+## 2. Dataset format
+
+The development dataset uses matching filenames:
 
 ```text
 DATASET/
 ├── NoisyLR/
-│   ├── sample_000.npy
+│   ├── 000000.npy
+│   ├── 000001.npy
 │   └── ...
 └── GT/
-    ├── sample_000.npy
+    ├── 000000.npy
+    ├── 000001.npy
     └── ...
 ```
 
-`NoisyLR` and `GT` filenames must match. The loader uses a deterministic 90/10 split with seed 42, matching the validated development pipeline.
+`NoisyLR` and `GT` files must have matching stems. The development pipeline uses a deterministic 90/10 train/validation split with seed `42`.
 
-## Train
+The supplied degraded arrays may contain values outside `[0, 1]` because the challenge explicitly notes that speckle noise can push intensities beyond the ground-truth range. The evaluator therefore does **not** clip the input before inference; clipping is applied only to the model output.
+
+## 3. Train from scratch
 
 ```bash
-pip install -r requirements.txt
-python train.py --lr-dir /path/to/NoisyLR --gt-dir /path/to/GT --output checkpoints/best_integrated_model.pth --epochs 30 --batch-size 8
+python train.py \
+  --lr-dir /path/to/DATASET/NoisyLR \
+  --gt-dir /path/to/DATASET/GT \
+  --output checkpoints/best_integrated_model.pth \
+  --epochs 30 \
+  --batch-size 8
 ```
 
-## Evaluate / inference
+The training script records the best validation PSNR and stores the model state, optimizer state, scheduler state, epoch, PSNR and validation loss in the checkpoint.
 
-The benchmark script is a standalone Python program and does not require a Jupyter notebook. It accepts an input directory and an output directory:
+## 4. Run inference
+
+The inference entry point requires only an input directory, output directory and trained checkpoint:
+
+```bash
+python inference.py \
+  --input-dir /path/to/test_images \
+  --output-dir outputs/test_results \
+  --checkpoint checkpoints/best_integrated_model.pth
+```
+
+The script accepts `.npy`, `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tif` and `.tiff` grayscale inputs and writes restored PNG images.
+
+## 5. Run the standalone evaluator
+
+This is the script intended for reproducible benchmarking:
 
 ```bash
 python evaluate.py \
@@ -78,24 +137,56 @@ python evaluate.py \
   --checkpoint checkpoints/best_integrated_model.pth
 ```
 
-For a paired validation set, additionally provide the ground-truth directory:
+It requires no notebook and no manual code edits. It loads the checkpoint, processes every supported image, writes the restored outputs, and reports mean inference time.
+
+For local paired validation, add the ground-truth directory:
 
 ```bash
 python evaluate.py \
-  --input-dir /path/to/NoisyLR \
-  --gt-dir /path/to/GT \
+  --input-dir /path/to/DATASET/NoisyLR \
+  --gt-dir /path/to/DATASET/GT \
   --output-dir outputs/validation_results \
   --checkpoint checkpoints/best_integrated_model.pth
 ```
 
-Supported input formats are `.npy`, `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tif`, and `.tiff`. The evaluator writes restored images to the requested output directory and reports inference time. When ground truth is supplied, it also reports PSNR and SSIM.
+When ground truth is supplied, PSNR and SSIM are also reported.
 
-## Trained weights
+## 6. Quick architecture check
 
-The final validated weight file is `best_integrated_model.pth`. It must be added to `checkpoints/` or provided through a downloadable release/large-file link before final submission. The repository intentionally does not contain a fabricated or placeholder checkpoint.
+The model structure can be checked without the dataset or trained weights:
 
-## Submission note
+```bash
+python smoke_test.py
+```
 
-SEMICON/KLA's published requirements state that the GitHub repository must include a complete README, standalone evaluation script, training script, downloadable trained weights, restored test outputs, and `requirements.txt`. The benchmark script must run without manual code edits. We therefore keep the runnable Python pipeline separate from the development notebook.
+Expected output includes:
 
-Official requirements: https://i4c.in/hackathon-2026/
+```text
+Output shape : (1, 1, 256, 256)
+Parameters   : 6,415,216 (6.415216 M)
+Smoke test passed.
+```
+
+## Weights and test outputs
+
+The final submission must contain the **actual trained checkpoint** and the **actual restored outputs produced by that checkpoint**. They are deliberately not replaced with fabricated placeholders.
+
+If the checkpoint is too large for a normal GitHub file, use Git LFS or a downloadable release/storage link, then update the README with the exact download location.
+
+## Reproducibility checklist
+
+Before submitting:
+
+- [ ] `python smoke_test.py` passes on a clean environment.
+- [ ] `requirements.txt` contains the exact verified environment (`pip freeze`).
+- [ ] `checkpoints/best_integrated_model.pth` or a documented downloadable weight is available.
+- [ ] `evaluate.py` runs from the command line without editing the source.
+- [ ] The official test outputs are present under `outputs/`.
+- [ ] The reported 27.947178 dB figure is clearly labelled as development validation, not hidden-test performance.
+
+## Official problem statement
+
+SEMICON India Hackathon 2026, KLA track:
+https://i4c.in/hackathon-2026/
+
+The official requirements specify a public GitHub repository with a complete README, standalone evaluation script, training code, downloadable trained weights, restored test outputs and reproducible dependencies. The evaluation script is intended to be run as-is by the benchmarking team. citeturn0search0
