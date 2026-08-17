@@ -1,66 +1,68 @@
 # AI Image Restoration for Semiconductor Inspection
 
-PyTorch pipeline for restoring degraded grayscale inspection images.
+PyTorch implementation of an adaptive grayscale image-restoration model for the SEMICON India Hackathon 2026 KLA problem statement.
 
-**SEMICON India Hackathon 2026 · KLA**
-
-## Pipeline
+## Final model
 
 ```text
-128×128 degraded input
-        ↓
-NAFNet restoration backbone
-        ↓
-Degradation-aware conditioning
-        ↓
-Detail + 2× reconstruction head
-        ↓
-256×256 restored output
+128×128 degraded grayscale .npy
+            ↓
+       NAFNet backbone
+            ↓
+ Degradation-aware conditioning
+            ↓
+   Detail + 2× SR head
+            ↓
+256×256 restored grayscale .npy
 ```
 
-Training loss:
+The model contains **6,415,216 trainable parameters (6.415216 M)**.
 
-```text
-L = L1 + 0.1 × Lgradient + 0.01 × Lfrequency
+## Required evaluation interface
+
+The evaluator should run exactly:
+
+```bash
+python run.py <input-dir> <output-dir>
 ```
 
-## Development result
+No checkpoint path, internet connection, API key, additional model download, or manual code modification is required.
 
-| Metric | Value |
-|---|---:|
-| Mean validation PSNR | **27.915544 dB** |
-| Checkpoint epoch | **18** |
-| Parameters | **6.415216 M** |
-| Input | **128 × 128** |
-| Output | **256 × 256** |
+`run.py`:
 
-These are development-validation results from the final trained checkpoint. They are not hidden-test scores.
+- reads every `.npy` file in the input directory
+- accepts grayscale arrays shaped `(H, W)` or `(H, W, 1)`
+- creates the output directory if necessary
+- automatically loads `models/best_model_inference.pth`
+- uses an NVIDIA GPU when CUDA is available
+- produces one `.npy` output for every input
+- preserves each input filename
+- produces grayscale `(H, W)` outputs
+- constrains output values to `[0, 1]`
+- rejects NaN/Inf outputs
+- verifies the output resolution is 2× the input resolution
 
-## Results
-
-`outputs/` contains three representative input/restored/ground-truth comparisons and the **25-second demo video**.
-
-See [`results.md`](results.md) for the sample metrics.
-
-## Repository
+## Submission structure
 
 ```text
 image-restoration-ai/
-├── data/               # Dataset loader and input format
-├── models/             # NAFNet and integrated restoration model
-├── outputs/            # Sample results and demo video
-├── train.py            # Model training
-├── inference.py        # Single-run image restoration
-├── evaluate.py         # PSNR, SSIM and timing evaluation
-├── smoke_test.py       # Fast architecture sanity check
-├── requirements.txt    # Python dependencies
-├── results.md          # Verified results record
-└── README.md
+├── run.py
+├── requirements.txt
+├── README.md
+├── models/
+│   ├── __init__.py
+│   ├── integrated_model.py
+│   ├── nafnet.py
+│   └── best_model_inference.pth
+└── data/
+    └── dataset.py
 ```
+
+The trained inference checkpoint contains only the model `state_dict`; optimizer and scheduler states are intentionally excluded because they are not required for evaluation.
 
 ## Dataset
 
-Use paired grayscale `.npy` files with matching filenames:
+The KLA/SEMICON dataset is **not bundled with this repository** because of its size. The training pipeline expects paired grayscale `.npy` files with matching filenames:
 
 ```text
 DATASET/
@@ -72,72 +74,43 @@ DATASET/
     └── ...
 ```
 
-The dataset is provided separately and is not included in this repository.
+For training/reproduction, provide the dataset directories explicitly to the training script.
 
-## Setup
+## Reproduction / training
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+The training code in `train.py` implements the final training configuration:
 
-Windows PowerShell:
+- 30 epochs
+- batch size 8
+- AdamW optimizer
+- initial learning rate `2e-4`
+- cosine annealing schedule
+- seed 42
+- restoration loss: `L1 + 0.1 × Lgradient + 0.01 × Lfrequency`
 
-```powershell
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-## Train
+Example:
 
 ```bash
 python train.py \
   --lr-dir /path/to/DATASET/NoisyLR \
   --gt-dir /path/to/DATASET/GT \
-  --output best_integrated_model.pth
+  --output checkpoints/best_integrated_model.pth
 ```
 
-Default configuration: 30 epochs, batch size 8, AdamW, cosine learning-rate decay, seed 42.
+The dataset loader is in `data/dataset.py` and the model implementation is in `models/`.
 
-## Inference
+## Development validation result
 
-A trained checkpoint is required separately.
+| Metric | Value |
+|---|---:|
+| Mean validation PSNR | **27.915544 dB** |
+| Checkpoint epoch | **18** |
+| Parameters | **6.415216 M** |
+| Input | **128 × 128** |
+| Output | **256 × 256** |
 
-```bash
-python inference.py \
-  --input-dir /path/to/images \
-  --output-dir outputs/restored \
-  --checkpoint /path/to/best_integrated_model.pth
-```
+These are development-validation results, not hidden-test scores.
 
-## Evaluation
+## Repository notes
 
-```bash
-python evaluate.py \
-  --input-dir /path/to/NoisyLR \
-  --gt-dir /path/to/GT \
-  --output-dir outputs/validation_results \
-  --checkpoint /path/to/best_integrated_model.pth
-```
-
-With ground truth, this reports mean PSNR, mean SSIM, and mean inference time.
-
-## Smoke test
-
-`smoke_test.py` is a fast architecture check. It does **not** train the model and does **not** require the dataset or checkpoint.
-
-Run:
-
-```bash
-python smoke_test.py
-```
-
-It verifies:
-
-- model construction and imports
-- parameter count
-- expected tensor dimensions
-- 128×128 input → 256×256 output
-
-A successful run confirms that the repository's model code loads and produces the expected output shape before a full training or inference run.
+The repository may contain additional training/evaluation utilities used during development. They are not required by the evaluator. The only required execution entry point is `run.py`.
