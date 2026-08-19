@@ -111,6 +111,4 @@ The dataset loader is in `data/dataset.py` and the model implementation is in `m
 
 These are development-validation results, not hidden-test scores.
 
-## Repository notes
 
-The repository may contain additional training/evaluation utilities used during development. They are not required by the evaluator. The only required execution entry point is `run.py`.
