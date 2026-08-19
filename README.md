@@ -2,6 +2,14 @@
 
 PyTorch implementation of an adaptive grayscale image-restoration model for the SEMICON India Hackathon 2026 KLA problem statement.
 
+## Dataset
+
+This solution was developed and trained using the **KLA-provided dataset for the AI-Based Restoration of Degraded Images problem statement**.
+
+The dataset consists of paired degraded (`NoisyLR`) and ground-truth (`GT`) grayscale `.npy` images.
+
+The dataset itself is not included in this repository due to its size and submission constraints.
+
 ## Final model
 
 ```text
